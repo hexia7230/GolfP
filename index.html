@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ゴルフポイント - Golf Point Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="apple-touch-icon" href="/icons/icon.png">
+</head>
+
+<body>
+    <div id="app">
+        <!-- Main Navigation Header -->
+        <header class="ios-header">
+            <h1 id="page-title">ラウンド入力</h1>
+        </header>
+
+        <!-- Main Content Screens -->
+        <main id="main-content">
+            <!-- Round Entry Screen -->
+            <section id="screen-entry" class="app-screen">
+                <div class="card">
+                    <div class="input-group">
+                        <label for="course-name">コース名</label>
+                        <input type="text" id="course-name" placeholder="コース名を入力">
+                    </div>
+                    <div class="input-group">
+                        <label for="round-rate">レート (1差あたり)</label>
+                        <input type="number" id="round-rate" value="500" inputmode="numeric">
+                    </div>
+                </div>
+
+                <div id="player-inputs-container">
+                    <!-- Player blocks will be injected here -->
+                </div>
+
+                <div class="action-bar">
+                    <button id="btn-calculate" class="btn-primary">計算して保存</button>
+                </div>
+            </section>
+
+            <!-- Status/Result Screen (Overlay or Modal-like) -->
+            <section id="screen-result" class="app-screen hidden">
+                <div class="result-card list-card">
+                    <h2>計算結果</h2>
+                    <div id="round-result-list"></div>
+                </div>
+                <div class="result-card list-card mt-20">
+                    <h2>最新の通計</h2>
+                    <div id="total-points-list"></div>
+                </div>
+                <div class="action-bar">
+                    <button id="btn-back-to-entry" class="btn-secondary">戻る</button>
+                </div>
+            </section>
+
+            <!-- History Screen -->
+            <section id="screen-history" class="app-screen hidden">
+                <div id="history-list-container">
+                    <!-- History items will be injected here -->
+                </div>
+            </section>
+
+            <!-- Settings Screen -->
+            <section id="screen-settings" class="app-screen hidden">
+                <div class="section-title">プレイヤー管理</div>
+                <div class="card list-card" id="settings-players-list">
+                    <!-- Player name edit inputs -->
+                </div>
+
+                <div class="mt-20">
+                    <button id="btn-add-player" class="btn-inline">+ プレイヤー追加</button>
+                </div>
+
+                <div class="section-title mt-30">データ管理</div>
+                <div class="card">
+                    <button id="btn-reset" class="btn-flat btn-danger">全データをリセット</button>
+                </div>
+
+                <div class="version-info">Golf Point Tracker v1.0</div>
+            </section>
+        </main>
+
+        <!-- Bottom Tab Bar -->
+        <nav class="tab-bar">
+            <button class="tab-item active" data-screen="entry">
+                <span class="icon">⛳️</span>
+                <span class="label">入力</span>
+            </button>
+            <button class="tab-item" data-screen="history">
+                <span class="icon">📜</span>
+                <span class="label">履歴</span>
+            </button>
+            <button class="tab-item" data-screen="settings">
+                <span class="icon">⚙️</span>
+                <span class="label">設定</span>
+            </button>
+        </nav>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "golf-point-tracker",
+  "version": "1.0.0",
+  "description": "Mobile-first golf point calculation app",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}
