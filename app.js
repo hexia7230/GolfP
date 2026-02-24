@@ -98,6 +98,21 @@ tabItems.forEach(item => {
 });
 
 // --- Entry Screen Logic ---
+function saveCurrentInputs() {
+    const scoreInputs = document.querySelectorAll('.input-score');
+    scoreInputs.forEach(input => {
+        const pid = input.dataset.pid;
+        const player = state.data.players.find(p => p.id === pid);
+        if (player) {
+            player.lastScore = input.value;
+            const hcpInput = document.querySelector(`.input-hcp[data-pid="${pid}"]`);
+            player.lastHcp = hcpInput ? hcpInput.value : "0";
+            const nCheck = document.querySelector(`.input-n[data-pid="${pid}"]`);
+            player.lastN = nCheck ? nCheck.checked : false;
+        }
+    });
+}
+
 function renderEntryScreen() {
     playerInputsContainer.innerHTML = '';
     state.data.players.forEach(player => {
@@ -111,13 +126,19 @@ function renderEntryScreen() {
                     <span class="slider"></span>
                 </label>
             </div>
-            <div class="input-group pb-score">
-                <label>スコア</label>
-                <input type="number" class="input-score" data-pid="${player.id}" inputmode="numeric" placeholder="0" ${player.active ? '' : 'disabled'}>
-            </div>
-            <div class="input-group pb-hcp">
-                <label>ハンディ</label>
-                <input type="number" class="input-hcp" data-pid="${player.id}" inputmode="numeric" value="0" ${player.active ? '' : 'disabled'}>
+            <div class="pb-inputs">
+                <div class="input-group">
+                    <label>スコア</label>
+                    <input type="number" class="input-score" data-pid="${player.id}" inputmode="numeric" placeholder="0" value="${player.lastScore || ''}" ${player.active ? '' : 'disabled'}>
+                </div>
+                <div class="input-group">
+                    <label>ハンデ</label>
+                    <input type="number" class="input-hcp" data-pid="${player.id}" inputmode="numeric" value="${player.lastHcp || '0'}" ${player.active ? '' : 'disabled'}>
+                </div>
+                <div class="input-group-n">
+                    <label>N</label>
+                    <input type="checkbox" class="input-n" data-pid="${player.id}" ${player.lastN ? 'checked' : ''} ${player.active ? '' : 'disabled'}>
+                </div>
             </div>
         `;
         playerInputsContainer.appendChild(block);
@@ -125,6 +146,7 @@ function renderEntryScreen() {
 }
 
 window.togglePlayerActive = (id, isActive) => {
+    saveCurrentInputs();
     const player = state.data.players.find(p => p.id === id);
     if (player) {
         player.active = isActive;
@@ -135,30 +157,27 @@ window.togglePlayerActive = (id, isActive) => {
 
 // --- Calculation ---
 document.getElementById('btn-calculate').addEventListener('click', () => {
+    saveCurrentInputs();
     const course = document.getElementById('course-name').value;
     const rate = parseInt(document.getElementById('round-rate').value) || 500;
+    const umaAmount = 500;
 
     const activeResults = [];
-    const scoreInputs = document.querySelectorAll('.input-score');
-
-    let valid = true;
-    scoreInputs.forEach(input => {
-        const pid = input.dataset.pid;
-        const player = state.data.players.find(p => p.id === pid);
+    state.data.players.forEach(player => {
         if (!player.active) return;
+        const score = parseInt(player.lastScore);
+        const hcp = parseInt(player.lastHcp) || 0;
+        const nearPin = player.lastN || false;
 
-        const score = parseInt(input.value);
-        const hcp = parseInt(document.querySelector(`.input-hcp[data-pid="${pid}"]`).value) || 0;
-
-        if (isNaN(score)) {
-            valid = false;
-        } else {
+        if (!isNaN(score)) {
             activeResults.push({
-                playerId: pid,
+                playerId: player.id,
                 name: player.name,
                 score,
                 handicap: hcp,
-                net: score - hcp
+                net: score - hcp,
+                nearPin,
+                change: 0
             });
         }
     });
@@ -168,27 +187,57 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
         return;
     }
 
-    if (!valid) {
-        alert('有効なスコアを入力してください。');
-        return;
+    // Updated Logic: Everyone plays everyone
+    for (let i = 0; i < activeResults.length; i++) {
+        for (let j = i + 1; j < activeResults.length; j++) {
+            const pA = activeResults[i];
+            const pB = activeResults[j];
+
+            const better = pA.net <= pB.net ? pA : pB;
+            const worse = pA.net <= pB.net ? pB : pA;
+            const diff = worse.net - better.net;
+
+            const isP1Involved = (better.playerId === 'p1' || worse.playerId === 'p1');
+
+            // Rule: 'N' players only play against Player 1.
+            if (!isP1Involved && (better.nearPin || worse.nearPin)) {
+                continue;
+            }
+
+            let matchPoints = diff * rate;
+
+            // Uma (Bonus) Logic
+            let applyUma = false;
+            // 2-player game: P1 vs P2 gets Uma unless 'N' is checked.
+            if (activeResults.length === 2) {
+                applyUma = !better.nearPin && !worse.nearPin;
+            } else {
+                // 3+ players: P1 is host (no Uma). Others play with Uma if no 'N'.
+                if (!isP1Involved && !better.nearPin && !worse.nearPin) {
+                    applyUma = true;
+                }
+            }
+
+            if (applyUma && diff > 0) {
+                matchPoints += umaAmount;
+            }
+
+            better.change += matchPoints;
+            worse.change -= matchPoints;
+        }
     }
 
-    // Identify best net
-    const bestNet = Math.min(...activeResults.map(r => r.net));
-
-    // Calculate point changes
-    let totalNegativePoints = 0;
+    // Add 'N' (Near-pin) bonus points if selected (+500)
+    const nBonus = 500;
     activeResults.forEach(r => {
-        const diff = r.net - bestNet;
-        r.change = -(diff * rate);
-        if (r.change < 0) totalNegativePoints += r.change;
-    });
-
-    // Best players share the positive points (to make total 0)
-    const winners = activeResults.filter(r => r.net === bestNet);
-    const winAmount = Math.abs(totalNegativePoints) / winners.length;
-    winners.forEach(w => {
-        w.change = winAmount;
+        if (r.nearPin) {
+            r.change += nBonus;
+            const others = activeResults.filter(o => o.playerId !== r.playerId);
+            if (others.length > 0) {
+                const sub = nBonus / others.length;
+                others.forEach(o => o.change -= sub);
+            }
+        }
     });
 
     const round = {
@@ -200,6 +249,16 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
     };
 
     state.addRound(round);
+
+    // Clear inputs after saving
+    state.data.players.forEach(p => {
+        p.lastScore = "";
+        p.lastHcp = "0";
+        p.lastN = false;
+    });
+    document.getElementById('course-name').value = "";
+    state.save();
+
     showResult(round);
 });
 
