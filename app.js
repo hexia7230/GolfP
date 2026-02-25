@@ -136,7 +136,7 @@ function renderEntryScreen() {
                     <input type="number" class="input-hcp" data-pid="${player.id}" inputmode="numeric" value="${player.lastHcp || '0'}" ${player.active ? '' : 'disabled'}>
                 </div>
                 <div class="input-group-n">
-                    <label>N</label>
+                    <label>N (全的中)</label>
                     <input type="checkbox" class="input-n" data-pid="${player.id}" ${player.lastN ? 'checked' : ''} ${player.active ? '' : 'disabled'}>
                 </div>
             </div>
@@ -199,21 +199,16 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
 
             const isP1Involved = (better.playerId === 'p1' || worse.playerId === 'p1');
 
-            // Rule: 'N' players only play against Player 1.
-            if (!isP1Involved && (better.nearPin || worse.nearPin)) {
-                continue;
-            }
-
             let matchPoints = diff * rate;
 
             // Uma (Bonus) Logic
             let applyUma = false;
-            // 2-player game: P1 vs P2 gets Uma unless 'N' is checked.
+            // 2-player game: P1 vs P2 gets Uma.
             if (activeResults.length === 2) {
-                applyUma = !better.nearPin && !worse.nearPin;
+                applyUma = true;
             } else {
-                // 3+ players: P1 is host (no Uma). Others play with Uma if no 'N'.
-                if (!isP1Involved && !better.nearPin && !worse.nearPin) {
+                // 3+ players: P1 is host (no Uma). Others play with Uma.
+                if (!isP1Involved) {
                     applyUma = true;
                 }
             }
@@ -227,15 +222,14 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
         }
     }
 
-    // Add 'N' (Near-pin) bonus points if selected (+500)
-    const nBonus = 500;
+    // Add 'N' (Near-pin) bonus points: +1000 from everyone else if selected
+    const nBonusPerPerson = 1000;
     activeResults.forEach(r => {
         if (r.nearPin) {
-            r.change += nBonus;
             const others = activeResults.filter(o => o.playerId !== r.playerId);
             if (others.length > 0) {
-                const sub = nBonus / others.length;
-                others.forEach(o => o.change -= sub);
+                r.change += nBonusPerPerson * others.length;
+                others.forEach(o => o.change -= nBonusPerPerson);
             }
         }
     });
