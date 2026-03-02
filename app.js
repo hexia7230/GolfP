@@ -107,8 +107,8 @@ function saveCurrentInputs() {
             player.lastScore = input.value;
             const hcpInput = document.querySelector(`.input-hcp[data-pid="${pid}"]`);
             player.lastHcp = hcpInput ? hcpInput.value : "0";
-            const nCheck = document.querySelector(`.input-n[data-pid="${pid}"]`);
-            player.lastN = nCheck ? nCheck.checked : false;
+            const nInput = document.querySelector(`.input-n[data-pid="${pid}"]`);
+            player.lastN = nInput ? parseInt(nInput.value) || 0 : 0;
         }
     });
 }
@@ -135,9 +135,9 @@ function renderEntryScreen() {
                     <label>ハンデ</label>
                     <input type="number" class="input-hcp" data-pid="${player.id}" inputmode="numeric" value="${player.lastHcp || '0'}" ${player.active ? '' : 'disabled'}>
                 </div>
-                <div class="input-group-n">
-                    <label>N (全的中)</label>
-                    <input type="checkbox" class="input-n" data-pid="${player.id}" ${player.lastN ? 'checked' : ''} ${player.active ? '' : 'disabled'}>
+                <div class="input-group">
+                    <label>ニアピン</label>
+                    <input type="number" class="input-n" data-pid="${player.id}" inputmode="numeric" value="${player.lastN || '0'}" ${player.active ? '' : 'disabled'}>
                 </div>
             </div>
         `;
@@ -167,7 +167,7 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
         if (!player.active) return;
         const score = parseInt(player.lastScore);
         const hcp = parseInt(player.lastHcp) || 0;
-        const nearPin = player.lastN || false;
+        const nearPinCount = parseInt(player.lastN) || 0;
 
         if (!isNaN(score)) {
             activeResults.push({
@@ -176,7 +176,7 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
                 score,
                 handicap: hcp,
                 net: score - hcp,
-                nearPin,
+                nearPinCount,
                 change: 0
             });
         }
@@ -222,14 +222,15 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
         }
     }
 
-    // Add 'N' (Near-pin) bonus points: +1000 from everyone else if selected
+    // Add 'N' (Near-pin) bonus points: +1000 from everyone else per count
     const nBonusPerPerson = 1000;
     activeResults.forEach(r => {
-        if (r.nearPin) {
+        if (r.nearPinCount > 0) {
             const others = activeResults.filter(o => o.playerId !== r.playerId);
             if (others.length > 0) {
-                r.change += nBonusPerPerson * others.length;
-                others.forEach(o => o.change -= nBonusPerPerson);
+                const totalGainFromOneWin = nBonusPerPerson * others.length;
+                r.change += totalGainFromOneWin * r.nearPinCount;
+                others.forEach(o => o.change -= nBonusPerPerson * r.nearPinCount);
             }
         }
     });
@@ -248,7 +249,7 @@ document.getElementById('btn-calculate').addEventListener('click', () => {
     state.data.players.forEach(p => {
         p.lastScore = "";
         p.lastHcp = "0";
-        p.lastN = false;
+        p.lastN = 0;
     });
     document.getElementById('course-name').value = "";
     state.save();
