@@ -1,27 +1,186 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ゴルフポイント - Golf Point Tracker</title>
-    <link rel="stylesheet" href="style.css">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="apple-touch-icon" href="/icons/icon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ios-blue: #007AFF;
+            --ios-grey: #8E8E93;
+            --ios-light-grey: #F2F2F7;
+            --ios-bg: #F2F2F7;
+            --ios-card-bg: #FFFFFF;
+            --ios-red: #FF3B30;
+            --ios-green: #34C759;
+            --ios-text: #000000;
+            --ios-text-secondary: #3C3C43;
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0; padding: 0;
+            background: radial-gradient(circle at top right, #e8f0ff, #f2f2f7 40%);
+            background-attachment: fixed;
+            color: var(--ios-text);
+            overflow-x: hidden;
+            user-select: none;
+            min-height: 100vh;
+        }
+        #app { display: flex; flex-direction: column; min-height: 100vh; }
+        .ios-header {
+            position: sticky; top: 0;
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            padding: 50px 20px 15px;
+            z-index: 100;
+            border-bottom: 0.5px solid rgba(0,0,0,0.1);
+        }
+        .ios-header h1 { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: -1px; color: var(--ios-text); }
+        main { flex: 1; padding: 20px 16px 120px; }
+        .app-screen { animation: slideIn 0.5s cubic-bezier(0.4,0,0.2,1); }
+        @keyframes slideIn {
+            from { opacity: 0; transform: scale(0.95) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .hidden { display: none !important; }
+        .card {
+            background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.06);
+            border: 0.5px solid rgba(255,255,255,1);
+        }
+        .list-card { padding: 0; overflow: hidden; }
+        .list-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px;
+            border-bottom: 0.5px solid rgba(0,0,0,0.05);
+            transition: background 0.2s;
+        }
+        .list-item:active { background: rgba(0,0,0,0.03); }
+        .input-group { display: flex; flex-direction: column; margin-bottom: 16px; }
+        .input-group label { font-size: 13px; color: var(--ios-blue); margin-bottom: 6px; margin-left: 2px; font-weight: 600; letter-spacing: 0.05em; }
+        input[type="text"], input[type="number"] {
+            background: #ffffff;
+            border: 1px solid rgba(0,0,0,0.05);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 17px;
+            outline: none;
+            width: 100%;
+            transition: all 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+        }
+        input:focus {
+            border-color: var(--ios-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,122,255,0.15);
+        }
+        .player-block {
+            background: rgba(255,255,255,0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 22px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex; flex-direction: column; gap: 16px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.06);
+            border: 0.5px solid rgba(255,255,255,1);
+            transition: all 0.3s ease;
+        }
+        .player-block.inactive { opacity: 0.5; filter: grayscale(1); }
+        .player-block:hover { transform: translateY(-2px); box-shadow: 0 15px 45px rgba(0,0,0,0.08); }
+        .pb-header { display: flex; justify-content: space-between; align-items: center; }
+        .pb-name { font-weight: 700; font-size: 18px; color: var(--ios-text); }
+        .pb-inputs { display: flex; gap: 12px; align-items: flex-end; }
+        .pb-inputs .input-group { margin-bottom: 0; flex: 1; }
+        .action-bar { margin-top: 24px; }
+        .btn-primary {
+            background: linear-gradient(135deg, #007AFF 0%, #0056D2 100%);
+            color: white; border: none; border-radius: 16px;
+            padding: 18px; width: 100%; font-size: 18px; font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,122,255,0.3);
+            transition: all 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
+        }
+        .btn-primary:active { transform: scale(0.95); box-shadow: 0 4px 10px rgba(0,122,255,0.2); }
+        .btn-secondary {
+            background: rgba(229,229,234,0.8); backdrop-filter: blur(10px);
+            color: var(--ios-text); border: none; border-radius: 16px;
+            padding: 18px; width: 100%; font-size: 18px; font-weight: 700;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .btn-inline { background: transparent; color: var(--ios-blue); border: none; font-size: 17px; padding: 12px 16px; font-weight: 600; transition: opacity 0.2s; }
+        .btn-inline:active { opacity: 0.5; }
+        .btn-flat { background: transparent; border: none; width: 100%; text-align: left; padding: 16px 0; font-size: 17px; color: var(--ios-blue); font-weight: 500; }
+        .btn-danger { color: var(--ios-red) !important; }
+        .tab-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(255,255,255,0.8);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            display: flex; justify-content: space-around;
+            padding: 12px 0 calc(12px + var(--safe-bottom));
+            border-top: 0.5px solid rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        .tab-item { display: flex; flex-direction: column; align-items: center; background: none; border: none; color: var(--ios-grey); flex: 1; transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
+        .tab-item:active { transform: scale(0.9); opacity: 0.7; }
+        .tab-item.active { color: var(--ios-blue); transform: translateY(-2px); }
+        .tab-item.active .icon { filter: drop-shadow(0 2px 4px rgba(0,122,255,0.3)); }
+        .tab-item .icon { font-size: 24px; margin-bottom: 4px; }
+        .tab-item .label { font-size: 10px; font-weight: 500; }
+        .point-pos { color: var(--ios-green); font-weight: 700; text-shadow: 0 0 10px rgba(52,199,89,0.2); }
+        .point-neg { color: var(--ios-red); font-weight: 700; text-shadow: 0 0 10px rgba(255,59,48,0.2); }
+        .result-row {
+            display: flex; justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 0.5px solid rgba(0,0,0,0.05);
+            animation: slideRight 0.4s cubic-bezier(0.175,0.885,0.32,1.275) both;
+        }
+        @keyframes slideRight {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .result-row:nth-child(1) { animation-delay: 0.1s; }
+        .result-row:nth-child(2) { animation-delay: 0.15s; }
+        .result-row:nth-child(3) { animation-delay: 0.2s; }
+        .result-row:nth-child(4) { animation-delay: 0.25s; }
+        .result-card h2 { font-size: 13px; color: var(--ios-blue); padding: 20px 20px 10px; margin: 0; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; }
+        .history-item { transition: transform 0.2s cubic-bezier(0.175,0.885,0.32,1.275); box-shadow: 0 12px 40px rgba(0,0,0,0.06); border: 0.5px solid rgba(255,255,255,1); }
+        .history-item:active { transform: scale(0.97); }
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 0.5px solid rgba(0,0,0,0.05); padding-bottom: 10px; }
+        .history-date { font-size: 13px; color: var(--ios-grey); font-weight: 500; }
+        .history-course { font-weight: 700; font-size: 16px; color: var(--ios-text); }
+        .history-players { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .mt-20 { margin-top: 20px; }
+        .mt-30 { margin-top: 30px; }
+        .section-title { font-size: 13px; color: var(--ios-text-secondary); text-transform: uppercase; margin-bottom: 8px; margin-left: 12px; }
+        .version-info { text-align: center; font-size: 12px; color: var(--ios-grey); margin-top: 40px; }
+        .ios-switch { display: inline-block; width: 40px; height: 22px; position: relative; cursor: pointer; }
+        .ios-switch input { display: none; }
+        .ios-switch .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #e5e5ea; border-radius: 22px; transition: 0.4s; }
+        .ios-switch .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px; background-color: white; border-radius: 50%; transition: 0.4s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .ios-switch input:checked + .slider { background-color: var(--ios-green); }
+        .ios-switch input:checked + .slider:before { transform: translateX(18px); }
+    </style>
 </head>
-
 <body>
     <div id="app">
-        <!-- Main Navigation Header -->
         <header class="ios-header">
             <h1 id="page-title">ラウンド入力</h1>
         </header>
-
-        <!-- Main Content Screens -->
         <main id="main-content">
             <!-- Round Entry Screen -->
             <section id="screen-entry" class="app-screen">
@@ -35,17 +194,13 @@
                         <input type="number" id="round-rate" value="500" inputmode="numeric">
                     </div>
                 </div>
-
-                <div id="player-inputs-container">
-                    <!-- Player blocks will be injected here -->
-                </div>
-
+                <div id="player-inputs-container"></div>
                 <div class="action-bar">
                     <button id="btn-calculate" class="btn-primary">計算して保存</button>
                 </div>
             </section>
 
-            <!-- Status/Result Screen (Overlay or Modal-like) -->
+            <!-- Result Screen -->
             <section id="screen-result" class="app-screen hidden">
                 <div class="result-card list-card">
                     <h2>計算結果</h2>
@@ -62,32 +217,24 @@
 
             <!-- History Screen -->
             <section id="screen-history" class="app-screen hidden">
-                <div id="history-list-container">
-                    <!-- History items will be injected here -->
-                </div>
+                <div id="history-list-container"></div>
             </section>
 
             <!-- Settings Screen -->
             <section id="screen-settings" class="app-screen hidden">
                 <div class="section-title">プレイヤー管理</div>
-                <div class="card list-card" id="settings-players-list">
-                    <!-- Player name edit inputs -->
-                </div>
-
+                <div class="card list-card" id="settings-players-list"></div>
                 <div class="mt-20">
                     <button id="btn-add-player" class="btn-inline">+ プレイヤー追加</button>
                 </div>
-
                 <div class="section-title mt-30">データ管理</div>
                 <div class="card">
                     <button id="btn-reset" class="btn-flat btn-danger">全データをリセット</button>
                 </div>
-
                 <div class="version-info">Golf Point Tracker v1.0</div>
             </section>
         </main>
 
-        <!-- Bottom Tab Bar -->
         <nav class="tab-bar">
             <button class="tab-item active" data-screen="entry">
                 <span class="icon">⛳️</span>
@@ -104,7 +251,309 @@
         </nav>
     </div>
 
-    <script src="app.js"></script>
-</body>
+    <script>
+    /**
+     * 計算ロジック（修正版）
+     *
+     * ウマルール:
+     *   - 参加人数が2人のとき: 全試合にウマ(500)を適用
+     *   - 参加人数が3人以上のとき: ウマなし（全試合）
+     *
+     * 対戦計算:
+     *   全プレイヤー総当たり。各対戦で net差 × レート を勝者が受け取り、
+     *   2人対戦時のみ差 > 0 にウマ500を加算。
+     *
+     * ニアピンボーナス:
+     *   1本につき、他の参加者全員から1000点ずつ受け取る。
+     *   例: 4人参加で1本 → +3000（他3人×1000）
+     *
+     * 検証例 (3人): P1:101/0/1N, P2:105/0/1N, P3:106/0/0N, レート500, ウマなし
+     *   P1vsP2: net差4 → P1+2000, P2-2000
+     *   P1vsP3: net差5 → P1+2500, P3-2500
+     *   P2vsP3: net差1 → P2+500, P3-500
+     *   P1ニア1本(他2人): P1+2000, P2-1000, P3-1000
+     *   P2ニア1本(他2人): P2+2000, P1-1000, P3-1000
+     *   合計: P1=2000+2500-1000+2000=+5500, P2=-2000+500-1000+2000=-500, P3=-2500-500-1000-1000=-5000 ✓
+     */
 
+    const STORAGE_KEY = 'golf_point_tracker_v1';
+
+    class AppState {
+        constructor() {
+            this.data = this.load();
+            this.currentScreen = 'entry';
+        }
+        load() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) return JSON.parse(saved);
+            return {
+                players: [
+                    { id: 'p1', name: 'プレイヤー1（設定から変更可能)', totalPoints: 0, active: true },
+                    { id: 'p2', name: 'プレイヤー2（設定から変更可能)', totalPoints: 0, active: true },
+                    { id: 'p3', name: 'プレイヤー3（設定から変更可能)', totalPoints: 0, active: true },
+                    { id: 'p4', name: 'プレイヤー4（設定から変更可能)', totalPoints: 0, active: true }
+                ],
+                rounds: [],
+                defaultRate: 500
+            };
+        }
+        save() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+        }
+        addRound(roundData) {
+            this.data.rounds.unshift(roundData);
+            roundData.playerResults.forEach(res => {
+                const player = this.data.players.find(p => p.id === res.playerId);
+                if (player) player.totalPoints += res.change;
+            });
+            this.save();
+        }
+        resetData() {
+            localStorage.removeItem(STORAGE_KEY);
+            window.location.reload();
+        }
+    }
+
+    const state = new AppState();
+
+    const screens = {
+        entry: document.getElementById('screen-entry'),
+        result: document.getElementById('screen-result'),
+        history: document.getElementById('screen-history'),
+        settings: document.getElementById('screen-settings')
+    };
+    const tabItems = document.querySelectorAll('.tab-item');
+    const pageTitle = document.getElementById('page-title');
+    const playerInputsContainer = document.getElementById('player-inputs-container');
+
+    function navigateTo(screenId) {
+        Object.keys(screens).forEach(id => screens[id].classList.add('hidden'));
+        screens[screenId].classList.remove('hidden');
+        tabItems.forEach(item => item.classList.toggle('active', item.dataset.screen === screenId));
+        const titles = { entry: 'ラウンド入力', result: '計算結果', history: '履歴', settings: '設定' };
+        pageTitle.textContent = titles[screenId] || 'ゴルフポイント';
+        if (screenId === 'entry') renderEntryScreen();
+        if (screenId === 'history') renderHistory();
+        if (screenId === 'settings') renderSettings();
+        window.scrollTo(0, 0);
+    }
+
+    tabItems.forEach(item => item.addEventListener('click', () => navigateTo(item.dataset.screen)));
+
+    function saveCurrentInputs() {
+        document.querySelectorAll('.input-score').forEach(input => {
+            const pid = input.dataset.pid;
+            const player = state.data.players.find(p => p.id === pid);
+            if (player) {
+                player.lastScore = input.value;
+                const hcpInput = document.querySelector(`.input-hcp[data-pid="${pid}"]`);
+                player.lastHcp = hcpInput ? hcpInput.value : "0";
+                const nInput = document.querySelector(`.input-n[data-pid="${pid}"]`);
+                player.lastN = nInput ? parseInt(nInput.value) || 0 : 0;
+            }
+        });
+    }
+
+    function renderEntryScreen() {
+        playerInputsContainer.innerHTML = '';
+        state.data.players.forEach(player => {
+            const block = document.createElement('div');
+            block.className = `player-block ${player.active ? '' : 'inactive'}`;
+            block.innerHTML = `
+                <div class="pb-header">
+                    <span class="pb-name">${player.name}</span>
+                    <label class="ios-switch">
+                        <input type="checkbox" ${player.active ? 'checked' : ''} onchange="togglePlayerActive('${player.id}', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="pb-inputs">
+                    <div class="input-group">
+                        <label>スコア</label>
+                        <input type="number" class="input-score" data-pid="${player.id}" inputmode="numeric" placeholder="0" value="${player.lastScore || ''}" ${player.active ? '' : 'disabled'}>
+                    </div>
+                    <div class="input-group">
+                        <label>ハンデ</label>
+                        <input type="number" class="input-hcp" data-pid="${player.id}" inputmode="numeric" value="${player.lastHcp || '0'}" ${player.active ? '' : 'disabled'}>
+                    </div>
+                    <div class="input-group">
+                        <label>ニアピン</label>
+                        <input type="number" class="input-n" data-pid="${player.id}" inputmode="numeric" value="${player.lastN || '0'}" ${player.active ? '' : 'disabled'}>
+                    </div>
+                </div>
+            `;
+            playerInputsContainer.appendChild(block);
+        });
+    }
+
+    window.togglePlayerActive = (id, isActive) => {
+        saveCurrentInputs();
+        const player = state.data.players.find(p => p.id === id);
+        if (player) { player.active = isActive; state.save(); renderEntryScreen(); }
+    };
+
+    document.getElementById('btn-calculate').addEventListener('click', () => {
+        saveCurrentInputs();
+        const course = document.getElementById('course-name').value;
+        const rate = parseInt(document.getElementById('round-rate').value) || 500;
+        const umaAmount = 500;
+
+        const activeResults = [];
+        state.data.players.forEach(player => {
+            if (!player.active) return;
+            const score = parseInt(player.lastScore);
+            const hcp = parseInt(player.lastHcp) || 0;
+            const nearPinCount = parseInt(player.lastN) || 0;
+            if (!isNaN(score)) {
+                activeResults.push({
+                    playerId: player.id,
+                    name: player.name,
+                    score,
+                    handicap: hcp,
+                    net: score - hcp,
+                    nearPinCount,
+                    change: 0
+                });
+            }
+        });
+
+        if (activeResults.length < 2) {
+            alert('少なくとも2人のスコアを入力してください。');
+            return;
+        }
+
+        // ウマは2人対戦時のみ適用、3人以上はウマなし
+        const applyUma = activeResults.length === 2;
+
+        // 総当たり対戦
+        for (let i = 0; i < activeResults.length; i++) {
+            for (let j = i + 1; j < activeResults.length; j++) {
+                const pA = activeResults[i];
+                const pB = activeResults[j];
+                const better = pA.net <= pB.net ? pA : pB;
+                const worse  = pA.net <= pB.net ? pB : pA;
+                const diff = worse.net - better.net;
+
+                let matchPoints = diff * rate;
+                if (applyUma && diff > 0) matchPoints += umaAmount;
+
+                better.change += matchPoints;
+                worse.change  -= matchPoints;
+            }
+        }
+
+        // ニアピンボーナス: 1本につき他の参加者全員から1000点
+        const nBonusPerPerson = 1000;
+        activeResults.forEach(r => {
+            if (r.nearPinCount > 0) {
+                const others = activeResults.filter(o => o.playerId !== r.playerId);
+                if (others.length > 0) {
+                    r.change += nBonusPerPerson * others.length * r.nearPinCount;
+                    others.forEach(o => o.change -= nBonusPerPerson * r.nearPinCount);
+                }
+            }
+        });
+
+        const round = {
+            id: 'r' + Date.now(),
+            date: new Date().toISOString(),
+            course: course || '未設定コース',
+            rate: rate,
+            playerResults: activeResults
+        };
+
+        state.addRound(round);
+
+        state.data.players.forEach(p => { p.lastScore = ""; p.lastHcp = "0"; p.lastN = 0; });
+        document.getElementById('course-name').value = "";
+        state.save();
+
+        showResult(round);
+    });
+
+    function showResult(round) {
+        document.getElementById('round-result-list').innerHTML = round.playerResults.map(r => `
+            <div class="result-row">
+                <span>${r.name}</span>
+                <span class="${r.change >= 0 ? 'point-pos' : 'point-neg'}">
+                    ${r.change >= 0 ? '+' : ''}${Math.round(r.change)}P
+                </span>
+            </div>
+        `).join('');
+        document.getElementById('total-points-list').innerHTML = state.data.players.map(p => `
+            <div class="result-row">
+                <span>${p.name}</span>
+                <span class="${p.totalPoints >= 0 ? 'point-pos' : 'point-neg'}">
+                    ${p.totalPoints >= 0 ? '+' : ''}${Math.round(p.totalPoints)}P
+                </span>
+            </div>
+        `).join('');
+        navigateTo('result');
+    }
+
+    document.getElementById('btn-back-to-entry').addEventListener('click', () => navigateTo('entry'));
+
+    function renderHistory() {
+        const container = document.getElementById('history-list-container');
+        if (state.data.rounds.length === 0) {
+            container.innerHTML = '<div class="card" style="text-align:center; color: #888;">履歴がありません</div>';
+            return;
+        }
+        container.innerHTML = state.data.rounds.map(round => {
+            const dateStr = new Date(round.date).toLocaleDateString('ja-JP');
+            return `
+                <div class="history-item card">
+                    <div class="history-header">
+                        <span class="history-course">${round.course}</span>
+                        <span class="history-date">${dateStr}</span>
+                    </div>
+                    <div class="history-players">
+                        ${round.playerResults.map(r => `
+                            <div style="font-size:14px; display:flex; justify-content:space-between; padding-right:8px;">
+                                <span>${r.name}</span>
+                                <span class="${r.change >= 0 ? 'point-pos' : 'point-neg'}">
+                                    ${r.change >= 0 ? '+' : ''}${Math.round(r.change)}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderSettings() {
+        document.getElementById('settings-players-list').innerHTML = state.data.players.map(p => `
+            <div class="list-item">
+                <input type="text" value="${p.name}" onchange="renamePlayer('${p.id}', this.value)" style="background:none; padding:4px;">
+                <button class="btn-danger" onclick="removePlayer('${p.id}')" style="background:none; border:none; font-size:14px;">削除</button>
+            </div>
+        `).join('');
+    }
+
+    window.renamePlayer = (id, newName) => {
+        const player = state.data.players.find(p => p.id === id);
+        if (player && newName) { player.name = newName; state.save(); }
+    };
+
+    window.removePlayer = (id) => {
+        if (state.data.players.length <= 1) return alert('最低1人のプレイヤーが必要です');
+        if (confirm('このプレイヤーを削除しますか？')) {
+            state.data.players = state.data.players.filter(p => p.id !== id);
+            state.save(); renderSettings();
+        }
+    };
+
+    document.getElementById('btn-add-player').addEventListener('click', () => {
+        state.data.players.push({ id: 'p' + Date.now(), name: '新プレイヤー', totalPoints: 0, active: true });
+        state.save(); renderSettings();
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+        if (confirm('全てのデータを消去しますか？この操作は取り消せません。')) state.resetData();
+    });
+
+    navigateTo('entry');
+    </script>
+</body>
 </html>
