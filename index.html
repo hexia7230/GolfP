@@ -396,7 +396,6 @@
         saveCurrentInputs();
         const course = document.getElementById('course-name').value;
         const rate = parseInt(document.getElementById('round-rate').value) || 500;
-        const umaAmount = 500;
 
         const activeResults = [];
         state.data.players.forEach(player => {
@@ -422,10 +421,7 @@
             return;
         }
 
-        // ウマは2人対戦時のみ適用、3人以上はウマなし
-        const applyUma = activeResults.length === 2;
-
-        // 総当たり対戦
+        // 総当たり対戦: net差 × レートのみ
         for (let i = 0; i < activeResults.length; i++) {
             for (let j = i + 1; j < activeResults.length; j++) {
                 const pA = activeResults[i];
@@ -434,9 +430,7 @@
                 const worse  = pA.net <= pB.net ? pB : pA;
                 const diff = worse.net - better.net;
 
-                let matchPoints = diff * rate;
-                if (applyUma && diff > 0) matchPoints += umaAmount;
-
+                const matchPoints = diff * rate;
                 better.change += matchPoints;
                 worse.change  -= matchPoints;
             }
